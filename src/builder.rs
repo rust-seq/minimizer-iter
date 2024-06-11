@@ -36,7 +36,7 @@ pub struct MinimizerBuilder<T: PrimInt = u64, S: BuildHasher = DefaultHashBuilde
 impl<T: PrimInt + Hash> MinimizerBuilder<T, DefaultHashBuilder> {
     /// Sets up the `MinimizerBuilder` with default values:
     /// - minimizer_size = 20
-    /// - width = 22
+    /// - width = 12 (31 - 20 + 1)
     /// - hasher = [`DefaultHashBuilder`]
     /// - encoding: A = `00`, C = `01`, G = `10`, T = `11`
     pub fn new() -> Self {
@@ -84,7 +84,7 @@ impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, S> {
     }
 
     /// Sets the width of the window.
-    pub fn width(mut self, width: u16) -> Self {
+    pub const fn width(mut self, width: u16) -> Self {
         self.width = width;
         self
     }

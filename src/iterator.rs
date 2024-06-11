@@ -37,7 +37,6 @@ where
                 self.queue.insert(&self.mmer);
             }
             self.min_pos = self.queue.get_min_pos();
-            Some(self.min_pos)
         } else {
             let mut min_pos = self.min_pos;
             while self.end < self.seq.len() && min_pos == self.min_pos {
@@ -51,8 +50,8 @@ where
                 return None;
             }
             self.min_pos = min_pos;
-            Some(self.min_pos)
         }
+        Some(self.min_pos)
     }
 }
 
@@ -90,7 +89,6 @@ where
                 self.queue.insert(self.mmer);
             }
             self.min_pos = self.queue.get_min_pos();
-            Some(self.min_pos)
         } else {
             let mut min_pos = self.min_pos;
             while self.end < self.seq.len() && min_pos.1 == self.min_pos.1 {
@@ -105,7 +103,7 @@ where
                 return None;
             }
             self.min_pos = min_pos;
-            Some(self.min_pos)
         }
+        Some(self.min_pos)
     }
 }
