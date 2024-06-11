@@ -1,0 +1,21 @@
+[package]
+name = "minimizer-iter"
+version = "1.0.0"
+authors = ["Igor Martayan <imartayan@users.noreply.github.com>"]
+description = "Iterate over minimizers of a DNA sequence"
+readme = "README.md"
+exclude = [".github/**", ".gitignore"]
+repository = "https://github.com/imartayan/minimizer-iter"
+homepage = "https://crates.io/crates/minimizer-iter"
+documentation = "https://docs.rs/minimizer-iter"
+license = "MIT"
+keywords = ["minimizer", "iterator", "bioinformatics", "dna"]
+categories = ["data-structures"]
+edition = "2021"
+
+[dependencies]
+minimizer-queue = "1"
+num-traits = "0.2"
+
+[dev-dependencies]
+nohash-hasher = "0.2"
