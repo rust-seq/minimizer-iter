@@ -1,8 +1,10 @@
-use crate::iterator::{MinimizerIterator, MinimizerPosIterator};
+use crate::algorithm::{Minimizer, MinimizerAlgorithm, ModMinimizer};
+use crate::iterator::{
+    MinimizerIterator, MinimizerPosIterator, ModSamplingIterator, ModSamplingPosIterator,
+};
 use core::hash::{BuildHasher, Hash};
 use core::marker::PhantomData;
-pub use minimizer_queue::DefaultHashBuilder;
-use minimizer_queue::{ImplicitMinimizerQueue, MinimizerQueue};
+use minimizer_queue::DefaultHashBuilder;
 use num_traits::PrimInt;
 
 /// A builder for iterators over minimizers.
@@ -25,21 +27,115 @@ use num_traits::PrimInt;
 /// }
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MinimizerBuilder<T: PrimInt = u64, S: BuildHasher = DefaultHashBuilder> {
+pub struct MinimizerBuilder<
+    T: PrimInt = u64,
+    A: MinimizerAlgorithm = Minimizer,
+    S: BuildHasher = DefaultHashBuilder,
+> {
     minimizer_size: usize,
     width: u16,
     hasher: S,
     encoding: [u8; 256],
-    _marker: PhantomData<T>,
+    _marker: PhantomData<(T, A)>,
 }
 
-impl<T: PrimInt + Hash> MinimizerBuilder<T, DefaultHashBuilder> {
+impl<T: PrimInt + Hash> MinimizerBuilder<T> {
     /// Sets up the `MinimizerBuilder` with default values:
-    /// - minimizer_size = 20
-    /// - width = 12 (31 - 20 + 1)
+    /// - minimizer_size = 21
+    /// - width = 11 (31 - 21 + 1)
     /// - hasher = [`DefaultHashBuilder`]
     /// - encoding: A = `00`, C = `01`, G = `10`, T = `11`
+    #[inline]
     pub fn new() -> Self {
+        Self::_new()
+    }
+}
+
+impl<T: PrimInt + Hash> Default for MinimizerBuilder<T> {
+    #[inline]
+    fn default() -> Self {
+        Self::_new()
+    }
+}
+
+impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, Minimizer, S> {
+    /// Builds an iterator over the minimizers and their positions in the given sequence.
+    #[inline]
+    pub fn iter(self, seq: &[u8]) -> MinimizerIterator<T, S> {
+        MinimizerIterator::new(
+            seq,
+            self.minimizer_size,
+            self.width,
+            self.hasher,
+            self.encoding,
+        )
+    }
+
+    /// Builds an iterator over the positions of the minimizers in the given sequence.
+    #[inline]
+    pub fn iter_pos(self, seq: &[u8]) -> MinimizerPosIterator<T, S> {
+        MinimizerPosIterator::new(
+            seq,
+            self.minimizer_size,
+            self.width,
+            self.hasher,
+            self.encoding,
+        )
+    }
+}
+
+const R: usize = 4;
+
+impl<T: PrimInt + Hash> MinimizerBuilder<T, ModMinimizer> {
+    /// Sets up the `MinimizerBuilder` for mod-minimizers with default values:
+    /// - minimizer_size = 21
+    /// - width = 11 (31 - 21 + 1)
+    /// - hasher = [`DefaultHashBuilder`]
+    /// - encoding: A = `00`, C = `01`, G = `10`, T = `11`
+    #[inline]
+    pub fn new_mod() -> Self {
+        Self::_new()
+    }
+}
+
+impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, ModMinimizer, S> {
+    /// Builds an iterator over the mod-minimizers and their positions in the given sequence.
+    #[inline]
+    pub fn iter(self, seq: &[u8]) -> ModSamplingIterator<T, S> {
+        assert!(
+            self.minimizer_size >= R,
+            "mod-minimizers require minimizer_size ≥ r={R}"
+        );
+        ModSamplingIterator::new(
+            seq,
+            self.minimizer_size,
+            self.width,
+            R + ((self.minimizer_size - R) % self.width as usize),
+            self.hasher,
+            self.encoding,
+        )
+    }
+
+    /// Builds an iterator over the positions of the mod-minimizers in the given sequence.
+    #[inline]
+    pub fn iter_pos(self, seq: &[u8]) -> ModSamplingPosIterator<T, S> {
+        assert!(
+            self.minimizer_size >= R,
+            "mod-minimizers require minimizer_size ≥ r={R}"
+        );
+        ModSamplingPosIterator::new(
+            seq,
+            self.minimizer_size,
+            self.width,
+            R + ((self.minimizer_size - R) % self.width as usize),
+            self.hasher,
+            self.encoding,
+        )
+    }
+}
+
+impl<T: PrimInt + Hash, A: MinimizerAlgorithm> MinimizerBuilder<T, A, DefaultHashBuilder> {
+    fn _new() -> Self {
         let mut encoding = [0u8; 256];
         encoding[b'A' as usize] = 0b00;
         encoding[b'a' as usize] = 0b00;
@@ -50,8 +146,8 @@ impl<T: PrimInt + Hash> MinimizerBuilder<T, DefaultHashBuilder> {
         encoding[b'T' as usize] = 0b11;
         encoding[b't' as usize] = 0b11;
         Self {
-            minimizer_size: 20,
-            width: 31 - 20 + 1,
+            minimizer_size: 21,
+            width: 31 - 21 + 1,
             hasher: DefaultHashBuilder::default(),
             encoding,
             _marker: PhantomData,
@@ -65,19 +161,13 @@ impl<T: PrimInt + Hash> MinimizerBuilder<T, DefaultHashBuilder> {
     }
 }
 
-impl<T: PrimInt + Hash> Default for MinimizerBuilder<T, DefaultHashBuilder> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, S> {
+impl<T: PrimInt + Hash, A: MinimizerAlgorithm, S: BuildHasher> MinimizerBuilder<T, A, S> {
     /// Sets the size of the minimizers.
     pub fn minimizer_size(mut self, minimizer_size: usize) -> Self {
         let max_size = (T::zero().count_zeros() / 2) as usize;
         assert!(
             minimizer_size <= max_size,
-            "Minimizer size must be ≤ {max_size}."
+            "With this integer type, minimizer_size must be ≤ {max_size}. Please select a smaller size or a larger type."
         );
         self.minimizer_size = minimizer_size;
         self
@@ -90,8 +180,8 @@ impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, S> {
     }
 
     /// Sets the hasher used to compute minimizers.
-    pub fn hasher<H: BuildHasher>(self, hasher: H) -> MinimizerBuilder<T, H> {
-        MinimizerBuilder::<T, H> {
+    pub fn hasher<H: BuildHasher>(self, hasher: H) -> MinimizerBuilder<T, A, H> {
+        MinimizerBuilder::<T, A, H> {
             minimizer_size: self.minimizer_size,
             width: self.width,
             hasher,
@@ -111,39 +201,5 @@ impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, S> {
         self.encoding[b'T' as usize] = t;
         self.encoding[b't' as usize] = t;
         self
-    }
-
-    /// Builds an iterator over the minimizers and their positions in the given sequence.
-    pub fn iter(self, seq: &[u8]) -> MinimizerIterator<T, S> {
-        let queue = MinimizerQueue::with_hasher(self.width, self.hasher);
-        let width = self.width as usize;
-        MinimizerIterator {
-            seq,
-            queue,
-            width,
-            mmer: T::zero(),
-            mmer_mask: (T::one() << (2 * self.minimizer_size)) - T::one(),
-            encoding: self.encoding,
-            base_width: width + self.minimizer_size - 1,
-            end: width + self.minimizer_size - 1,
-            min_pos: (T::zero(), 0),
-        }
-    }
-
-    /// Builds an iterator over the positions of the minimizers in the given sequence.
-    pub fn iter_pos(self, seq: &[u8]) -> MinimizerPosIterator<T, S> {
-        let queue = ImplicitMinimizerQueue::with_hasher(self.width, self.hasher);
-        let width = self.width as usize;
-        MinimizerPosIterator {
-            seq,
-            queue,
-            width,
-            mmer: T::zero(),
-            mmer_mask: (T::one() << (2 * self.minimizer_size)) - T::one(),
-            encoding: self.encoding,
-            base_width: width + self.minimizer_size - 1,
-            end: width + self.minimizer_size - 1,
-            min_pos: 0,
-        }
     }
 }
