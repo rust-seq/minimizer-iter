@@ -4,7 +4,7 @@ version = "1.1.0"
 authors = ["Igor Martayan <imartayan@users.noreply.github.com>"]
 description = "Iterate over minimizers of a DNA sequence"
 readme = "README.md"
-exclude = [".github/**", ".gitignore"]
+exclude = [".github/**", ".gitignore", "benches/**"]
 repository = "https://github.com/imartayan/minimizer-iter"
 homepage = "https://crates.io/crates/minimizer-iter"
 documentation = "https://docs.rs/minimizer-iter"
@@ -19,4 +19,13 @@ num-traits = "0.2"
 strength_reduce = "0.2"
 
 [dev-dependencies]
+biotest = { version = "0.2", features = ["sequence"] }
+cocktail = { git = "https://github.com/natir/cocktail.git" }
+criterion = "0.5"
+minimizers = { git = "https://github.com/RagnarGrootKoerkamp/minimizers.git" }
 nohash-hasher = "0.2"
+rand = "0.8"
+
+[[bench]]
+name = "benchmark"
+harness = false
