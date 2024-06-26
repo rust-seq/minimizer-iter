@@ -1,7 +1,5 @@
 use crate::algorithm::{Minimizer, MinimizerAlgorithm, ModMinimizer};
-use crate::iterator::{
-    MinimizerIterator, MinimizerPosIterator, ModSamplingIterator, ModSamplingPosIterator,
-};
+use crate::iterator::*;
 use core::hash::{BuildHasher, Hash};
 use core::marker::PhantomData;
 use minimizer_queue::DefaultHashBuilder;
@@ -31,6 +29,7 @@ pub struct MinimizerBuilder<
     T: PrimInt = u64,
     A: MinimizerAlgorithm = Minimizer,
     S: BuildHasher = DefaultHashBuilder,
+    const CANONICAL: bool = false,
 > {
     minimizer_size: usize,
     width: u16,
@@ -58,7 +57,7 @@ impl<T: PrimInt + Hash> Default for MinimizerBuilder<T> {
     }
 }
 
-impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, Minimizer, S> {
+impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, Minimizer, S, false> {
     /// Builds an iterator over the minimizers and their positions in the given sequence.
     #[inline]
     pub fn iter(self, seq: &[u8]) -> MinimizerIterator<T, S> {
@@ -84,6 +83,44 @@ impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, Minimizer, S> {
     }
 }
 
+impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, Minimizer, S, true> {
+    /// Builds an iterator over the canonical minimizers and their positions in the given sequence with a boolean indicating a reverse complement.
+    /// It requires an odd width to break ties between multiple minimizers.
+    #[inline]
+    pub fn iter(self, seq: &[u8]) -> CanonicalMinimizerIterator<T, S> {
+        assert_eq!(
+            self.width % 2,
+            1,
+            "width must be odd to break ties between multiple minimizers"
+        );
+        CanonicalMinimizerIterator::new(
+            seq,
+            self.minimizer_size,
+            self.width,
+            self.hasher,
+            self.encoding,
+        )
+    }
+
+    /// Builds an iterator over the positions of the canonical minimizers in the given sequence with a boolean indicating a reverse complement.
+    /// It requires an odd width to break ties between multiple minimizers.
+    #[inline]
+    pub fn iter_pos(self, seq: &[u8]) -> CanonicalMinimizerPosIterator<T, S> {
+        assert_eq!(
+            self.width % 2,
+            1,
+            "width must be odd to break ties between multiple minimizers"
+        );
+        CanonicalMinimizerPosIterator::new(
+            seq,
+            self.minimizer_size,
+            self.width,
+            self.hasher,
+            self.encoding,
+        )
+    }
+}
+
 const R: usize = 4;
 
 impl<T: PrimInt + Hash> MinimizerBuilder<T, ModMinimizer> {
@@ -98,7 +135,7 @@ impl<T: PrimInt + Hash> MinimizerBuilder<T, ModMinimizer> {
     }
 }
 
-impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, ModMinimizer, S> {
+impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, ModMinimizer, S, false> {
     /// Builds an iterator over the mod-minimizers and their positions in the given sequence.
     #[inline]
     pub fn iter(self, seq: &[u8]) -> ModSamplingIterator<T, S> {
@@ -124,6 +161,54 @@ impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, ModMinimizer, S> {
             "mod-minimizers require minimizer_size ≥ r={R}"
         );
         ModSamplingPosIterator::new(
+            seq,
+            self.minimizer_size,
+            self.width,
+            R + ((self.minimizer_size - R) % self.width as usize),
+            self.hasher,
+            self.encoding,
+        )
+    }
+}
+
+impl<T: PrimInt + Hash, S: BuildHasher> MinimizerBuilder<T, ModMinimizer, S, true> {
+    /// Builds an iterator over the canonical mod-minimizers and their positions in the given sequence with a boolean indicating a reverse complement.
+    /// It requires an odd width to break ties between multiple minimizers.
+    #[inline]
+    pub fn iter(self, seq: &[u8]) -> CanonicalModSamplingIterator<T, S> {
+        assert!(
+            self.minimizer_size >= R,
+            "mod-minimizers require minimizer_size ≥ r={R}"
+        );
+        assert_eq!(
+            self.width % 2,
+            1,
+            "width must be odd to break ties between multiple minimizers"
+        );
+        CanonicalModSamplingIterator::new(
+            seq,
+            self.minimizer_size,
+            self.width,
+            R + ((self.minimizer_size - R) % self.width as usize),
+            self.hasher,
+            self.encoding,
+        )
+    }
+
+    /// Builds an iterator over the positions of the canonical mod-minimizers in the given sequence with a boolean indicating a reverse complement.
+    /// It requires an odd width to break ties between multiple minimizers.
+    #[inline]
+    pub fn iter_pos(self, seq: &[u8]) -> CanonicalModSamplingPosIterator<T, S> {
+        assert!(
+            self.minimizer_size >= R,
+            "mod-minimizers require minimizer_size ≥ r={R}"
+        );
+        assert_eq!(
+            self.width % 2,
+            1,
+            "width must be odd to break ties between multiple minimizers"
+        );
+        CanonicalModSamplingPosIterator::new(
             seq,
             self.minimizer_size,
             self.width,
@@ -161,7 +246,9 @@ impl<T: PrimInt + Hash, A: MinimizerAlgorithm> MinimizerBuilder<T, A, DefaultHas
     }
 }
 
-impl<T: PrimInt + Hash, A: MinimizerAlgorithm, S: BuildHasher> MinimizerBuilder<T, A, S> {
+impl<T: PrimInt + Hash, A: MinimizerAlgorithm, S: BuildHasher, const CANONICAL: bool>
+    MinimizerBuilder<T, A, S, CANONICAL>
+{
     /// Sets the size of the minimizers.
     pub fn minimizer_size(mut self, minimizer_size: usize) -> Self {
         let max_size = (T::zero().count_zeros() / 2) as usize;
@@ -180,8 +267,8 @@ impl<T: PrimInt + Hash, A: MinimizerAlgorithm, S: BuildHasher> MinimizerBuilder<
     }
 
     /// Sets the hasher used to compute minimizers.
-    pub fn hasher<H: BuildHasher>(self, hasher: H) -> MinimizerBuilder<T, A, H> {
-        MinimizerBuilder::<T, A, H> {
+    pub fn hasher<H: BuildHasher>(self, hasher: H) -> MinimizerBuilder<T, A, H, CANONICAL> {
+        MinimizerBuilder::<T, A, H, CANONICAL> {
             minimizer_size: self.minimizer_size,
             width: self.width,
             hasher,
@@ -201,5 +288,27 @@ impl<T: PrimInt + Hash, A: MinimizerAlgorithm, S: BuildHasher> MinimizerBuilder<
         self.encoding[b'T' as usize] = t;
         self.encoding[b't' as usize] = t;
         self
+    }
+
+    /// Compute canonical minimizers.
+    pub fn canonical(self) -> MinimizerBuilder<T, A, S, true> {
+        MinimizerBuilder::<T, A, S, true> {
+            minimizer_size: self.minimizer_size,
+            width: self.width,
+            hasher: self.hasher,
+            encoding: self.encoding,
+            _marker: self._marker,
+        }
+    }
+
+    /// Compute non-canonical minimizers.
+    pub fn non_canonical(self) -> MinimizerBuilder<T, A, S, false> {
+        MinimizerBuilder::<T, A, S, false> {
+            minimizer_size: self.minimizer_size,
+            width: self.width,
+            hasher: self.hasher,
+            encoding: self.encoding,
+            _marker: self._marker,
+        }
     }
 }
