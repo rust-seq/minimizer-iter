@@ -78,6 +78,38 @@ fn lex_mod_minimizer(c: &mut Criterion, seq: &[u8], m: usize, w: u16) {
     });
 }
 
+fn canon_minimizer(c: &mut Criterion, seq: &[u8], m: usize, w: u16) {
+    let id = format!("canon minimizer m={m} w={w}");
+    c.bench_function(id.as_str(), |b| {
+        b.iter(|| {
+            for x in MinimizerBuilder::<u64>::new()
+                .canonical()
+                .minimizer_size(m)
+                .width(w)
+                .iter_pos(seq)
+            {
+                black_box(x);
+            }
+        })
+    });
+}
+
+fn canon_mod_minimizer(c: &mut Criterion, seq: &[u8], m: usize, w: u16) {
+    let id = format!("canon mod-minimizer m={m} w={w}");
+    c.bench_function(id.as_str(), |b| {
+        b.iter(|| {
+            for x in MinimizerBuilder::<u64, _>::new_mod()
+                .canonical()
+                .minimizer_size(m)
+                .width(w)
+                .iter_pos(seq)
+            {
+                black_box(x);
+            }
+        })
+    });
+}
+
 fn ragnar_minimizer(c: &mut Criterion, seq: &[u8], m: usize, w: usize) {
     let id = format!("ragnar's random minimizer m={m} w={w}");
     c.bench_function(id.as_str(), |b| {
@@ -123,9 +155,11 @@ fn all_benches(c: &mut Criterion) {
         if k <= 32 {
             cocktail_minimizer_forward(c, &seq, k as u8, m as u8);
         }
+        canon_minimizer(c, &seq, m, w);
         mod_minimizer(c, &seq, m, w);
         lex_mod_minimizer(c, &seq, m, w);
         ragnar_mod_minimizer(c, &seq, m, w as usize);
+        canon_mod_minimizer(c, &seq, m, w);
     }
 }
 
