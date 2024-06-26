@@ -72,9 +72,13 @@ MinimizerBuilder::<u128>::new()
 
 See the [documentation](https://docs.rs/minimizer-iter) for more details.
 
-## Benchmark
+## Benchmarks
 
 To run benchmarks against other implementations of minimizers, clone this repository and run:
 ```sh
 cargo bench
 ```
+
+## Contributors
+
+- [Igor Martayan](https://github.com/imartayan) (main developer)
