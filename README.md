@@ -82,3 +82,4 @@ cargo bench
 ## Contributors
 
 - [Igor Martayan](https://github.com/imartayan) (main developer)
+- [Pierre Marijon](https://github.com/natir)
