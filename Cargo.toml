@@ -13,18 +13,28 @@ keywords = ["minimizer", "iterator", "bioinformatics", "dna"]
 categories = ["data-structures"]
 edition = "2021"
 
+
 [dependencies]
 minimizer-queue = "1"
 num-traits = "0.2"
 strength_reduce = "0.2"
 
+# A dev dependency but optional dev dependency isn't actual support
+minimizers = { git = "https://github.com/RagnarGrootKoerkamp/minimizers.git", optional = true }
+
+
 [dev-dependencies]
 biotest = { version = "0.2", features = ["sequence"] }
 cocktail = { git = "https://github.com/natir/cocktail.git" }
 criterion = "0.5"
-minimizers = { git = "https://github.com/RagnarGrootKoerkamp/minimizers.git" }
 nohash-hasher = "0.2"
 rand = "0.8"
+
+
+[features]
+default = []
+nightly = ["dep:minimizers"]
+
 
 [[bench]]
 name = "benchmark"

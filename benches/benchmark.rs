@@ -2,6 +2,7 @@ use biotest::Format;
 use cocktail::tokenizer::minimizer::{method::Random, Forward};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use minimizer_iter::MinimizerBuilder;
+#[cfg(feature = "nightly")]
 use minimizers::{order::RandomOrder, Minimizer, ModSampling, SamplingScheme};
 use nohash_hasher::BuildNoHashHasher;
 
@@ -110,6 +111,7 @@ fn canon_mod_minimizer(c: &mut Criterion, seq: &[u8], m: usize, w: u16) {
     });
 }
 
+#[cfg(feature = "nightly")]
 fn ragnar_minimizer(c: &mut Criterion, seq: &[u8], m: usize, w: usize) {
     let id = format!("ragnar's random minimizer m={m} w={w}");
     c.bench_function(id.as_str(), |b| {
@@ -121,6 +123,7 @@ fn ragnar_minimizer(c: &mut Criterion, seq: &[u8], m: usize, w: usize) {
     });
 }
 
+#[cfg(feature = "nightly")]
 fn ragnar_mod_minimizer(c: &mut Criterion, seq: &[u8], m: usize, w: usize) {
     let id = format!("ragnar's mod-minimizer m={m} w={w}");
     c.bench_function(id.as_str(), |b| {
@@ -151,6 +154,7 @@ fn all_benches(c: &mut Criterion) {
         let w = (k - m + 1) as u16;
         minimizer(c, &seq, m, w);
         lex_minimizer(c, &seq, m, w);
+        #[cfg(feature = "nightly")]
         ragnar_minimizer(c, &seq, m, w as usize);
         if k <= 32 {
             cocktail_minimizer_forward(c, &seq, k as u8, m as u8);
@@ -158,6 +162,7 @@ fn all_benches(c: &mut Criterion) {
         canon_minimizer(c, &seq, m, w);
         mod_minimizer(c, &seq, m, w);
         lex_mod_minimizer(c, &seq, m, w);
+        #[cfg(feature = "nightly")]
         ragnar_mod_minimizer(c, &seq, m, w as usize);
         canon_mod_minimizer(c, &seq, m, w);
     }
