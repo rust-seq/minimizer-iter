@@ -15,7 +15,7 @@ Iterate over minimizers of a DNA sequence.
 - supports custom [hasher](https://doc.rust-lang.org/stable/core/hash/trait.BuildHasher.html), using [wyhash](https://github.com/JackThomson2/wyhash2) by default
 - can be seeded to produce a different ordering
 
-If you'd like to use the underlying data structure manually, have a look at the [minimizer-queue](https://github.com/imartayan/minimizer-queue) crate.
+If you'd like to use the underlying data structure manually, have a look at the [minimizer-queue](https://github.com/rust-seq/minimizer-queue) crate.
 
 ## Example usage
 
